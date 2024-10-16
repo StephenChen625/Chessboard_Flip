@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>棋盘翻转谜题</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .controls button, .controls input {
+            font-size: 1rem;
+            padding: 8px 12px;
+            margin: 5px;
+            border: none;
+            border-radius: 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        .controls button {
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+
+        .controls button:hover {
+            background-color: #0056b3;
+        }
+
+        .controls input {
+            width: 80px;
+            text-align: center;
+            border: 2px solid #ccc;
+            background-color: #fff;
+        }
+
+        .board {
+            display: grid;
+            gap: 2px;
+            margin-bottom: 20px;
+            border: 2px solid #333; /* 棋盘的清晰边界 */
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #333; /* 增强边界框线 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s, background-color 0.3s ease;
+        }
+
+        .black {
+            background-color: #333;
+        }
+
+        .white {
+            background-color: #fff;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 123, 255, 0.2); /* 透明蓝色蒙板 */
+            display: none;
+        }
+
+        .hovered .overlay {
+            display: block;
+        }
+
+        .stats {
+            font-size: 1.1rem;
+            color: #555;
+            background-color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stats p {
+            margin: 0;
+        }
+
+        .stats span {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>自定义棋盘谜题</h1>
+
+    <div class="controls">
+        <div>
+            <button id="rowMode">行模式</button>
+            <button id="colMode">列模式</button>
+        </div>
+        <p>当前模式：<span id="modeText">行模式</span></p>
+        <div>
+            <input type="number" id="rowsInput" placeholder="行数" min="1" value="8">
+            <input type="number" id="colsInput" placeholder="列数" min="1" value="8">
+            <button id="generateBoard">生成棋盘</button>
+        </div>
+    </div>
+
+    <div class="board" id="board">
+        <!-- 棋盘格子将动态生成 -->
+    </div>
+
+    <div class="stats">
+        <p>黑色格子：<span id="blackCount">0</span> | 白色格子：<span id="whiteCount">0</span></p>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const modeText = document.getElementById('modeText');
+        const rowsInput = document.getElementById('rowsInput');
+        const colsInput = document.getElementById('colsInput');
+        const generateBoardButton = document.getElementById('generateBoard');
+        const blackCount = document.getElementById('blackCount');
+        const whiteCount = document.getElementById('whiteCount');
+
+        let isRowMode = true; // 默认模式为行模式
+
+        // 初始化生成棋盘
+        generateBoard(parseInt(rowsInput.value), parseInt(colsInput.value));
+
+        // 切换到行模式
+        document.getElementById('rowMode').addEventListener('click', () => {
+            isRowMode = true;
+            modeText.textContent = '行模式';
+        });
+
+        // 切换到列模式
+        document.getElementById('colMode').addEventListener('click', () => {
+            isRowMode = false;
+            modeText.textContent = '列模式';
+        });
+
+        // 根据用户输入生成新的棋盘
+        generateBoardButton.addEventListener('click', () => {
+            const rows = parseInt(rowsInput.value);
+            const cols = parseInt(colsInput.value);
+            if (rows > 0 && cols > 0) {
+                generateBoard(rows, cols);
+            }
+        });
+
+        // 生成棋盘的函数
+        function generateBoard(rows, cols) {
+            board.innerHTML = ''; // 清除之前的棋盘
+            board.style.gridTemplateColumns = `repeat(${cols}, 50px)`;
+            board.style.gridTemplateRows = `repeat(${rows}, 50px)`;
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', (i + j) % 2 === 0 ? 'white' : 'black'); // 黑白相间
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+
+                    // 添加透明蒙板用于悬停效果
+                    const overlay = document.createElement('div');
+                    overlay.classList.add('overlay');
+                    cell.appendChild(overlay);
+
+                    cell.addEventListener('mouseenter', handleMouseEnter);
+                    cell.addEventListener('mouseleave', handleMouseLeave);
+                    cell.addEventListener('click', handleClick);
+                    board.appendChild(cell);
+                }
+            }
+
+            updateCounts(); // 更新黑白格子计数
+        }
+
+        // 处理鼠标悬停效果
+        function handleMouseEnter() {
+            const row = this.dataset.row;
+            const col = this.dataset.col;
+            highlightRowOrColumn(row, col);
+        }
+
+        function handleMouseLeave() {
+            resetBoardHighlight();
+        }
+
+        // 处理点击事件，切换颜色
+        function handleClick() {
+            const row = this.dataset.row;
+            const col = this.dataset.col;
+            if (isRowMode) {
+                toggleRow(row);
+            } else {
+                toggleColumn(col);
+            }
+            updateCounts(); // 点击后更新黑白格子计数
+        }
+
+        // 切换整行颜色
+        function toggleRow(row) {
+            const cols = colsInput.value;
+            for (let i = 0; i < cols; i++) {
+                const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${i}"]`);
+                cell.classList.toggle('black');
+                cell.classList.toggle('white');
+            }
+        }
+
+        // 切换整列颜色
+        function toggleColumn(col) {
+            const rows = rowsInput.value;
+            for (let i = 0; i < rows; i++) {
+                const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`);
+                cell.classList.toggle('black');
+                cell.classList.toggle('white');
+            }
+        }
+
+        // 高亮显示行或列
+        function highlightRowOrColumn(row, col) {
+            if (isRowMode) {
+                const cols = colsInput.value;
+                for (let i = 0; i < cols; i++) {
+                    const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${i}"]`);
+                    cell.classList.add('hovered');
+                }
+            } else {
+                const rows = rowsInput.value;
+                for (let i = 0; i < rows; i++) {
+                    const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${col}"]`);
+                    cell.classList.add('hovered');
+                }
+            }
+        }
+
+        // 重置高亮
+        function resetBoardHighlight() {
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('hovered');
+            });
+        }
+
+        // 更新黑白格子的计数
+        function updateCounts() {
+            const cells = document.querySelectorAll('.cell');
+            let blackCountValue = 0;
+            let whiteCountValue = 0;
+
+            cells.forEach(cell => {
+                if (cell.classList.contains('black')) {
+                    blackCountValue++;
+                } else if (cell.classList.contains('white')) {
+                    whiteCountValue++;
+                }
+            });
+
+            blackCount.textContent = blackCountValue;
+            whiteCount.textContent = whiteCountValue;
+        }
+    </script>
+
+</body>
+</html>
